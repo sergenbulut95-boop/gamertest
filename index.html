@@ -342,18 +342,15 @@
     </div>
 
     <script>
-        // Supabase Doğrudan Bağlantı Tanımları (Yeni Nesil Publishable ve Secret Anahtarları)
+        // Supabase Kesin Bağlantı Tanımları
+        const SUPABASE_URL = 'https://ttfsvisibbxgesnsfmjh.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8pwcEFauJqrKi_X1o-SweQ_97NygoKY';
-        const SUPABASE_SECRET_KEY = 'sb_secret_9qNFMcb57iuq_v9-vZLL5A_EDM1cchc';
-        
-        // Publishable key içerisindeki benzersiz proje ID'si kullanılarak Supabase URL otomatik oluşturulur
-        const SUPABASE_URL = 'https://' + SUPABASE_PUBLISHABLE_KEY.split('_')[2] + '.supabase.co';
 
         let supabaseClient = null;
         try {
             supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
         } catch (e) {
-            console.error("Supabase istemcisi başlatılamadı:", e);
+            console.error("Supabase bağlantı hatası:", e);
         }
 
         let testInterval = null;
@@ -391,7 +388,8 @@
                     document.getElementById('fillRegion').style.width = "5%";
                 }
             } catch (err) {
-                document.getElementById('valRegion').innerText = "Bağlantı Bekleniyor";
+                console.error("Veri çekme hatası:", err);
+                document.getElementById('valRegion').innerText = "Veri Alınamadı";
             }
         }
 
