@@ -342,15 +342,18 @@
     </div>
 
     <script>
-        // Supabase Bağlantı Tanımları
-        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ZFZP5mx5fAOR0P_l5Zx_Ew_ok8MHpnM';
+        // Supabase Doğrudan Bağlantı Tanımları (Yeni Nesil Publishable ve Secret Anahtarları)
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_8pwcEFauJqrKi_X1o-SweQ_97NygoKY';
+        const SUPABASE_SECRET_KEY = 'sb_secret_9qNFMcb57iuq_v9-vZLL5A_EDM1cchc';
+        
+        // Publishable key içerisindeki benzersiz proje ID'si kullanılarak Supabase URL otomatik oluşturulur
         const SUPABASE_URL = 'https://' + SUPABASE_PUBLISHABLE_KEY.split('_')[2] + '.supabase.co';
 
         let supabaseClient = null;
         try {
             supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
         } catch (e) {
-            console.error("Supabase bağlantı hatası:", e);
+            console.error("Supabase istemcisi başlatılamadı:", e);
         }
 
         let testInterval = null;
