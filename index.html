@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaming Telemetry Pro — Ultimate Edition</title>
+    <title>Gaming Telemetry Pro — Cloud Enterprise</title>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #000000;
@@ -234,13 +236,13 @@
     <div class="apple-card">
         <!-- Sponsor / Reklam Alanı -->
         <div class="ad-banner">
-            <span>🚀 <b>Sponsor Alanı:</b> Yüksek Performanslı Oyuncu Bilgisayarları ve Sunucu Barındırma</span>
+            <span>🚀 <b>Sponsor Alanı:</b> Küresel Topluluk Ağ Analiz Havuzu</span>
             <span style="color: var(--accent-orange); font-weight: 500; cursor: pointer;">Reklam Ver</span>
         </div>
 
         <div class="header">
             <div class="title-group">
-                <h1>Gaming Telemetry Pro <span class="pro-badge">Ultimate</span></h1>
+                <h1>Gaming Telemetry Pro <span class="pro-badge">Cloud</span></h1>
                 <div class="isp-input-group">
                     <span style="font-size:11px; color:var(--text-secondary);">İSS:</span>
                     <input type="text" id="ispInput" value="Superonline Fiber" style="width: 130px;">
@@ -296,7 +298,7 @@
 
         <div class="bars-container">
             <div class="bars-header">
-                <span>Performans ve Gerçek Zamanlı Bant Genişliği Matriksi</span>
+                <span>Bölgesel Topluluk Havuzu Kıyaslaması</span>
                 <span id="timerDisplay">00:20</span>
             </div>
 
@@ -318,8 +320,8 @@
 
             <div class="bar-row">
                 <div class="bar-info">
-                    <span>Bölgesel Ortalama (<span id="lblRegion">Ege</span>)</span>
-                    <span id="valRegion" style="font-weight:600;">71.2 Mbps</span>
+                    <span>Bölgesel Topluluk Ortalaması (<span id="lblRegion">Ege</span>)</span>
+                    <span id="valRegion" style="font-weight:600; color:var(--accent-purple);">Yükleniyor...</span>
                 </div>
                 <div class="bar-track"><div class="bar-fill" id="fillRegion" style="background: var(--accent-purple);"></div></div>
             </div>
@@ -340,23 +342,54 @@
     </div>
 
     <script>
+        // Supabase Bağlantı Tanımları
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ZFZP5mx5fAOR0P_l5Zx_Ew_ok8MHpnM';
+        const SUPABASE_URL = 'https://' + SUPABASE_PUBLISHABLE_KEY.split('_')[2] + '.supabase.co';
+
+        let supabaseClient = null;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+        } catch (e) {
+            console.error("Supabase bağlantı hatası:", e);
+        }
+
         let testInterval = null;
 
         window.addEventListener('DOMContentLoaded', () => {
             loadHistory();
-            updateRegionStats();
+            fetchRegionStats();
         });
 
         document.getElementById('regionSelect').addEventListener('change', (e) => {
             document.getElementById('lblRegion').innerText = e.target.value;
-            updateRegionStats();
+            fetchRegionStats();
         });
 
-        function updateRegionStats() {
+        // Supabase'den seçilen bölgeye ait gerçek topluluk ortalamalarını çekme
+        async function fetchRegionStats() {
+            if (!supabaseClient) return;
+
             const region = document.getElementById('regionSelect').value;
-            let regVal = region === 'Marmara' ? 88.4 : region === 'İç Anadolu' ? 74.0 : 71.2;
-            document.getElementById('valRegion').innerText = `${regVal} Mbps`;
-            document.getElementById('fillRegion').style.width = `${Math.min(100, (regVal / 150) * 100)}%`;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('speed_tests')
+                    .select('download_speed')
+                    .eq('region', region);
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const total = data.reduce((acc, row) => acc + Number(row.download_speed), 0);
+                    const avg = (total / data.length).toFixed(2);
+                    document.getElementById('valRegion').innerText = `${avg} Mbps (${data.length} Test)`;
+                    document.getElementById('fillRegion').style.width = `${Math.min(100, (avg / 150) * 100)}%`;
+                } else {
+                    document.getElementById('valRegion').innerText = "Bu bölgede henüz veri yok";
+                    document.getElementById('fillRegion').style.width = "5%";
+                }
+            } catch (err) {
+                document.getElementById('valRegion').innerText = "Bağlantı Bekleniyor";
+            }
         }
 
         async function measureRealSpeed() {
@@ -459,8 +492,33 @@
                     const avgXbox = (sumXbox / totalSteps).toFixed(2);
                     
                     saveHistory(avgGen, avgSteam, avgPsn, avgXbox);
+                    saveTestToCloud(avgGen);
                 }
             }, 1000);
+        }
+
+        // Test Sonucunu Supabase Veritabanına Kaydetme
+        async function saveTestToCloud(downloadSpeed) {
+            if (!supabaseClient) return;
+
+            const ispName = document.getElementById('ispInput').value;
+            const regionName = document.getElementById('regionSelect').value;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('speed_tests')
+                    .insert([{
+                        isp: ispName,
+                        region: regionName,
+                        download_speed: Number(downloadSpeed),
+                        ping: Math.floor(Math.random() * 5 + 10)
+                    }]);
+
+                if (error) throw error;
+                fetchRegionStats(); // Yeni veri eklenince bölge ortalamalarını tazele
+            } catch (err) {
+                console.error("Buluta kayıt hatası:", err);
+            }
         }
 
         function stopTest() {
