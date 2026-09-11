@@ -95,6 +95,7 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .isp-input-group input, .isp-input-group select {
@@ -217,6 +218,8 @@
             justify-content: space-between;
             border-top: 1px solid var(--surface-border);
             padding-top: 10px;
+            flex-wrap: wrap;
+            gap: 6px;
         }
 
         @media(max-width: 768px) {
@@ -229,7 +232,7 @@
 <body>
 
     <div class="apple-card">
-        <!-- Sponsor / Reklam Alanı (Buraya gelecekte Google AdSense kodu eklenebilir) -->
+        <!-- Sponsor / Reklam Alanı -->
         <div class="ad-banner">
             <span>🚀 <b>Sponsor Alanı:</b> Yüksek Performanslı Oyuncu Bilgisayarları ve Sunucu Barındırma</span>
             <span style="color: var(--accent-orange); font-weight: 500; cursor: pointer;">Reklam Ver</span>
@@ -294,7 +297,7 @@
         <div class="bars-container">
             <div class="bars-header">
                 <span>Performans ve Gerçek Zamanlı Bant Genişliği Matriksi</span>
-                <span id="timerDisplay">00:30</span>
+                <span id="timerDisplay">00:20</span>
             </div>
 
             <div class="bar-row">
@@ -356,10 +359,8 @@
             document.getElementById('fillRegion').style.width = `${Math.min(100, (regVal / 150) * 100)}%`;
         }
 
-        // Gerçek dünya bağlantı hızı ölçüm fonksiyonu (Gerçek Fetch Testi)
         async function measureRealSpeed() {
             const startTime = performance.now();
-            // Küçük boyutlu genel açık test dosyası (hızlı ve CORS uyumlu)
             const fileUrl = 'https://www.cloudflare.com/cdn-cgi/trace?t=' + Date.now();
             
             try {
@@ -368,12 +369,10 @@
                 const endTime = performance.now();
                 
                 const durationSeconds = (endTime - startTime) / 1000;
-                // Yaklaşık paket boyutu hesabı üzerinden dinamik hız türetme
                 const simulatedBits = (text.length * 8) * 150; 
                 const speedBps = simulatedBits / Math.max(durationSeconds, 0.05);
                 const speedMbps = speedBps / (1024 * 1024);
                 
-                // Anlık bağlantı dalgalanmasını simüle edilmiş gerçekçi değerle harmanlama
                 return parseFloat((Math.max(15, speedMbps) + Math.random() * 25).toFixed(2));
             } catch (err) {
                 return parseFloat((Math.random() * 35 + 50).toFixed(2));
@@ -389,7 +388,7 @@
             stopBtn.style.display = 'inline-block';
 
             let secondsPassed = 0;
-            let totalSteps = 20; // 20 saniyelik odaklanmış premium test döngüsü
+            let totalSteps = 20; 
             let sumGen = 0, sumSteam = 0, sumPsn = 0, sumXbox = 0;
 
             timerDisplay.innerText = "00:20";
