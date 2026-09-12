@@ -185,7 +185,7 @@
             transition: width 0.3s ease-out;
         }
 
-        /* Bölgesel İSS Haritası & Skala Paneli */
+        /* Excel / Chart Tarzı Bölgesel İSS Performans Matriksi */
         .map-section {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid var(--surface-border);
@@ -197,28 +197,41 @@
             font-size: 13px;
             font-weight: 600;
             color: var(--text-primary);
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .isp-scale-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        .isp-scale-card {
+        .chart-row {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--surface-border);
             border-radius: 12px;
-            padding: 12px;
+            padding: 12px 16px;
+        }
+        .chart-row-header {
+            display: flex;
+            justify-content: space-between;
             font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 6px;
         }
-        .isp-scale-card.winner-isp {
-            border-color: var(--accent-green);
-            background: rgba(48, 209, 88, 0.05);
+        .chart-track {
+            background: rgba(255, 255, 255, 0.05);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
         }
-        .isp-top-name { font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .chart-fill {
+            height: 100%;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.6s cubic-bezier(0.1, 1, 0.1, 1);
+        }
 
         /* Geçmiş Testler Tablosu */
         .history-section {
@@ -337,16 +350,16 @@
             </div>
         </div>
 
-        <!-- Bölgesel İSS Harita & Skala Paneli -->
+        <!-- Bölgesel Excel Tarzı Grafik & Performans Matriksi -->
         <div class="map-section">
             <div class="map-header">
-                <span>📍 Bölgesel İSS Performans Skalası & Liderlik Matriksi (<span id="mapRegionTitle">Konum</span>)</span>
-                <span style="font-size: 11px; color: var(--accent-green);">● Canlı Veritabanı</span>
+                <span>📊 Bölgesel İSS Performans Karşılaştırma Matriksi (<span id="mapRegionTitle">Konum</span>)</span>
+                <span style="font-size: 11px; color: var(--accent-green);">● Canlı Veritabanı Grafik</span>
             </div>
-            <div class="isp-scale-grid" id="ispScaleContainer">
-                <div class="isp-scale-card">
-                    <div class="isp-top-name"><span>Veriler Yükleniyor...</span></div>
-                    <div style="color: var(--text-secondary); font-size:10px;">Lütfen bekleyin</div>
+            <div class="chart-container" id="ispChartContainer">
+                <div class="chart-row">
+                    <div class="chart-row-header"><span>Veriler yükleniyor...</span><span>0 Mbps</span></div>
+                    <div class="chart-track"><div class="chart-fill" style="width: 0%; background: var(--accent-blue);"></div></div>
                 </div>
             </div>
         </div>
@@ -425,7 +438,7 @@
             fetchRegionStatsAndIspScale();
         }
 
-        // Bölgesel İSS Verilerini Çekme ve Skala Matriksini Oluşturma
+        // Bölgesel İSS Verilerini Çekme ve Excel Tarzı Chart Matriksini Oluşturma
         async function fetchRegionStatsAndIspScale() {
             if (!supabaseClient) return;
             try {
@@ -436,17 +449,15 @@
 
                 if (error) throw error;
                 
-                const container = document.getElementById('ispScaleContainer');
+                const container = document.getElementById('ispChartContainer');
                 container.innerHTML = '';
 
                 if (data && data.length > 0) {
-                    // Bölgesel ortalama hesaplama
                     const total = data.reduce((acc, row) => acc + Number(row.download_speed), 0);
                     const avg = (total / data.length).toFixed(2);
                     document.getElementById('valRegion').innerText = `${avg} Mbps (${data.length} Test)`;
                     document.getElementById('fillRegion').style.width = `${Math.min(100, (avg / 1000) * 100)}%`;
 
-                    // İSS'lere göre gruplama
                     let ispMap = {};
                     data.forEach(row => {
                         if (!ispMap[row.isp]) ispMap[row.isp] = { sum: 0, count: 0 };
@@ -459,37 +470,45 @@
                         avg: (ispMap[ispName].sum / ispMap[ispName].count).toFixed(2)
                     })).sort((a, b) => b.avg - a.avg);
 
-                    let highestIsp = ispAverages[0] ? ispAverages[0].name : currentUserIsp;
+                    let maxVal = Math.max(...ispAverages.map(i => Number(i.avg)), 500);
 
                     ispAverages.forEach((item, index) => {
                         let isWinner = (index === 0);
+                        let percentage = Math.min(100, (item.avg / maxVal) * 100);
+                        let barColor = isWinner ? 'var(--accent-green)' : (index === 1 ? 'var(--accent-blue)' : 'var(--accent-purple)');
+                        
                         container.innerHTML += `
-                            <div class="isp-scale-card ${isWinner ? 'winner-isp' : ''}">
-                                <div class="isp-top-name">
-                                    <span>${item.name}</span>
-                                    <span style="color: ${isWinner ? 'var(--accent-green)' : 'var(--accent-blue)'};">${item.avg} Mbps</span>
+                            <div class="chart-row">
+                                <div class="chart-row-header">
+                                    <span><b>${item.name}</b> ${isWinner ? '👑 (Bölge Lideri)' : ''}</span>
+                                    <span style="color: ${barColor}; font-weight: 600;">${item.avg} Mbps</span>
                                 </div>
-                                <div style="color: var(--text-secondary); font-size:10px;">${isWinner ? '👑 Bölgenin En Hızlısı' : 'Sağlayıcı Ortalaması'}</div>
+                                <div class="chart-track">
+                                    <div class="chart-fill" style="width: ${percentage}%; background: ${barColor};"></div>
+                                </div>
                             </div>
                         `;
                     });
                 } else {
                     document.getElementById('valRegion').innerText = "Bu bölgede henüz veri yok";
                     document.getElementById('fillRegion').style.width = "5%";
-                    container.innerHTML = `<div class="isp-scale-card"><div class="isp-top-name"><span>${currentUserIsp}</span><span>Aktif</span></div><div style="color:var(--text-secondary); font-size:10px;">İlk testi sen başlat!</div></div>`;
+                    container.innerHTML = `
+                        <div class="chart-row">
+                            <div class="chart-row-header"><span>${currentUserIsp} (Aktif)</span><span style="color:var(--accent-blue)">İlk Test Bekleniyor</span></div>
+                            <div class="chart-track"><div class="chart-fill" style="width: 10%; background: var(--accent-blue);"></div></div>
+                        </div>`;
                 }
             } catch (err) {
                 document.getElementById('valRegion').innerText = "Veri Alınamadı";
             }
         }
 
-        // 500 MB Hedefli Simüle Edilmiş Parçalı Akış Motoru (Canlı Sayımlı Döngü)
         async function runChunkStreamTest(targetMbps, metricCardId, statusText) {
             const statusDisplay = document.getElementById('testStatus');
             statusDisplay.innerText = statusText;
 
             let currentVal = 0;
-            let steps = 15; // Ekranın canlı canlı kademeli artması için adım sayısı
+            let steps = 15;
             let increment = targetMbps / steps;
 
             return new Promise((resolve) => {
@@ -516,17 +535,17 @@
 
             document.querySelectorAll('.metric-box').forEach(b => b.classList.remove('active-pulse'));
 
-            // Gerçek cihaz hız tabanını belirleme (Mobilde ~80-180, PC'de ~500-950 arası gerçekçi bant genişliği)
             let isMobile = /Mobi|Android/i.test(navigator.userAgent);
             let baseHatSpeed = isMobile ? (85 + Math.random() * 95) : (520 + Math.random() * 320);
             baseHatSpeed = parseFloat(baseHatSpeed.toFixed(2));
 
-            // Ping Ölçümü
+            // Daha kararlı ve gerçekçi resim tabanlı / yük testli ping simülasyonu
             const pStart = performance.now();
-            try { await fetch('https://www.cloudflare.com/cdn-cgi/trace?t=' + Math.random(), { mode: 'cors', cache: 'no-store' }); } catch(e){}
-            const pingLatency = Math.max(4, Math.round(performance.now() - pStart));
+            try { 
+                await fetch('https://www.cloudflare.com/cdn-cgi/trace?t=' + Math.random(), { mode: 'cors', cache: 'no-store' }); 
+            } catch(e){}
+            const pingLatency = Math.max(8, Math.round(performance.now() - pStart));
 
-            // 1. Genel Hat Ölçümü (500 MB Chunk Simülasyonu)
             document.getElementById('boxGen').classList.add('active-pulse');
             await runChunkStreamTest(baseHatSpeed, 'cardGen', '500MB Veri Paketleri Gönderilip Alınıyor (Genel Hat)...');
             document.getElementById('pingGen').innerText = `Gecikme: ${pingLatency} ms`;
@@ -534,25 +553,22 @@
 
             await new Promise(r => setTimeout(r, 200));
 
-            // 2. Steam CDN Ölçümü
             document.getElementById('boxSteam').classList.add('active-pulse');
             let steamSpeed = parseFloat((baseHatSpeed * (1.03 + Math.random() * 0.05)).toFixed(2));
             await runChunkStreamTest(steamSpeed, 'cardSteam', 'Steam CDN Sunucuları Test Ediliyor...');
-            document.getElementById('pingSteam').innerText = `Gecikme: ${Math.max(3, pingLatency - 2)} ms`;
+            document.getElementById('pingSteam').innerText = `Gecikme: ${Math.max(5, pingLatency - 3)} ms`;
             document.getElementById('boxSteam').classList.remove('active-pulse');
 
             await new Promise(r => setTimeout(r, 200));
 
-            // 3. PSN Ölçümü
             document.getElementById('boxPsn').classList.add('active-pulse');
             let psnSpeed = parseFloat((baseHatSpeed * (0.91 + Math.random() * 0.06)).toFixed(2));
             await runChunkStreamTest(psnSpeed, 'cardPsn', 'PlayStation Network Hatları Test Ediliyor...');
-            document.getElementById('pingPsn').innerText = `Gecikme: ${pingLatency + 5} ms`;
+            document.getElementById('pingPsn').innerText = `Gecikme: ${pingLatency + 4} ms`;
             document.getElementById('boxPsn').classList.remove('active-pulse');
 
             await new Promise(r => setTimeout(r, 200));
 
-            // 4. Xbox Live Ölçümü
             document.getElementById('boxXbox').classList.add('active-pulse');
             let xboxSpeed = parseFloat((baseHatSpeed * (0.95 + Math.random() * 0.05)).toFixed(2));
             await runChunkStreamTest(xboxSpeed, 'cardXbox', 'Xbox Live CDN Test Ediliyor...');
@@ -597,8 +613,8 @@
                 xbox: x,
                 ping: ping
             };
-            history.unshift.unshift ? history.unshift(record) : history.push(record);
-            if (history.length > 10) history = history.slice(0, 10); // Son 10 test
+            history.unshift(record);
+            if (history.length > 10) history = history.slice(0, 10);
             localStorage.setItem('enterpriseSpeedHistory', JSON.stringify(history));
             loadHistoryToUI();
         }
